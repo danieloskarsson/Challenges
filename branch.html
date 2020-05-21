@@ -3,156 +3,125 @@
 <head>
 	<script>
 
-		//------------------------------------=======############==========----------------------------------------
-		//                                 Canvas Slide Constants and Variables
-		//------------------------------------=======############==========----------------------------------------
-
 		// Challenge: Make most natural fractal tree with smallest amount of code
 
-		var c;
-		var arrpnt = [];
-		var delay = 30;
-
-		var xmax = 1430;
-		var ymax = 780;
-
-		var mx, my, mb;
-
-		var grd1;
-
-		function drawCirc(x, y, r, fill) {
-			c.beginPath();
-			c.arc(x, y, r, 0, 2 * 3.1415, false);
-			if (fill == true) {
-				c.fill();
-			} else {
-				c.stroke();
-			}
-
-		}
-
-		function setupSlides() {
-			canvas = document.getElementById("mycanvas");
-			c = canvas.getContext("2d");
-
-			setTimeout(drawHead, delay);
-		}
-
-		const radius = 220;
-		var offs = 0;
-
-		//----------------------------------------------------------------------------------
-		// closestVertex - Returns distance to Closest vertex to px,py 
-		//----------------------------------------------------------------------------------
-
-		function closestVertex(vertices, px, py) {
-			dst = 5000;
+		function distanceToClosestVertex(vertices, x, y) {
+			var minDistance = 5000;
 			for (var i = 0; i < vertices.length; i++) {
-				var dx = vertices[i].x - px;
-				var dy = vertices[i].y - py;
-				var cdst = Math.sqrt((dx * dx) + (dy * dy));
-				if (cdst < dst) dst = cdst;
-			}
-			return dst;
-		}
+				var dx = vertices[i].x - x;
+				var dy = vertices[i].y - y;
+				var calculatedDistance = Math.sqrt(dx * dx + dy * dy);
 
-		//----------------------------------------------------------------------------------
-		// Testangles - Make random angle X times and find highest closest vertex
-		//----------------------------------------------------------------------------------
-
-		function testangles(vertices, posx, posy, len, baseangle, magnitude, attempts) {
-			var mdst = 0;
-			var ang = baseangle;
-			for (var j = 0; j < attempts; j++) {
-				var tang = baseangle + ((Math.random() * magnitude) - (magnitude * 0.5));
-				cdst = closestVertex(vertices, posx + (Math.sin(tang) * len), posy + (Math.cos(tang) * len));
-				// drawCirc(posx+(Math.sin(tang)*len),posy+(Math.cos(tang)*len),3,false);
-				if (cdst > mdst) {
-					mdst = cdst;
-					ang = tang;
+				if (calculatedDistance < minDistance) {
+					minDistance = calculatedDistance;
 				}
 			}
-			return ang;
+			return minDistance;
 		}
 
-		//----------------------------------------------------------------------------------
-		// drawHead - Clear screen and keep drawing
-		//----------------------------------------------------------------------------------
+		function randomAngleToHighestClosestVertex(vertices, x, y, length, minAngle, magnitude, attempts) {
+			var maxDistance = 0;
+			var angle = minAngle;
+			for (var i = 0; i < attempts; i++) {
+				var randomAngle = minAngle + Math.random() * magnitude - magnitude * 0.5;
+				var calculatedDistance = distanceToClosestVertex(vertices, x + Math.sin(randomAngle) * length, y + Math.cos(randomAngle) * length);
 
-		function drawHead() {
-			c.globalAlpha = 1.0;
-			c.clearRect(0, 0, xmax, ymax);
+				if (calculatedDistance > maxDistance) {
+					maxDistance = calculatedDistance;
+					angle = randomAngle;
+				}
+			}
+			return angle;
+		}
 
-			c.fillStyle = "RGB(0,59,85)";
-			c.strokeStyle = "#bbb";
+		function draw(maxGeneration) {
+			var canvas = document.getElementById("canvas");
+			var context = canvas.getContext("2d");
+			context.fillStyle = "RGB(0,59,85)";
+			context.strokeStyle = "#bbb";
+			context.clearRect(0, 0, canvas.width, canvas.height);
 
-			var thearr = [];
+			var segments = [];
 			var vertices = [];
 
-			var sang = Math.PI;
-			thearr.push({ xk: 600, yk: 600, len: 140, ang: sang, width: 10, gen: 0, opx: Math.cos(sang + (Math.PI)), opy: Math.sin(sang + (Math.PI)) });
-
-			const maxgen = 11;
+			segments.push({ 
+				x: 600, 
+				y: 600, 
+				length: 140, 
+				angle: Math.PI, 
+				width: 10, 
+				generation: 0, 
+				opx: Math.cos(2 * Math.PI), 
+				opy: Math.sin(2 * Math.PI) 
+			});
 
 			do {
-				var line = thearr.pop();
+				var segment = segments.pop();
 
-				// Trunk Params
-				var dx = (Math.sin(line.ang) * line.len);
-				var dy = (Math.cos(line.ang) * line.len);
-				var len = (line.len * 0.7) + (Math.random() * line.len * 0.2);
-				var posx = line.xk + dx;
-				var posy = line.yk + dy;
-				vertices.push({ x: posx, y: posy });
-				var ang = testangles(vertices, posx, posy, len, line.ang, 0.4, 5);
+				// Trunk parameters
+				var dx = Math.sin(segment.angle) * segment.length;
+				var dy = Math.cos(segment.angle) * segment.length;
+				var length = segment.length * 0.7 + Math.random() * segment.length * 0.2;
+				var x = segment.x + dx;
+				var y = segment.y + dy;
+				vertices.push({ x: x, y: y });
+				var angle = randomAngleToHighestClosestVertex(vertices, x, y, length, segment.angle, 0.4, 5);
 
-				// Shared params
-				var width = line.width * 0.8;
-				var gen = line.gen + 1;
-				var blen = Math.sqrt((dx * dx) + (dy * dy));
+				// Shared parameters
+				var width = segment.width * 0.8;
+				var generation = segment.generation + 1;
 
-				// New Branch Params
-				var bpos = Math.random();
-				var px = (-dy / blen);
-				var py = (dx / blen);
-				var bposx = (line.xk + (dx * bpos));
-				var bposy = (line.yk + (dy * bpos));
-				var bwidth = width * 0.7;
-				var blen = len * 0.9;
-				var spread = 0.9 + (0.6 * (gen / maxgen));
-				var bang = testangles(vertices, bposx, bposy, blen, line.ang, spread, 12);
+				// Branch parameters
+				var branchLength = Math.sqrt(dx * dx + dy * dy);
+				var px = -dy / branchLength;
+				var py = dx / branchLength;
+				var branchRandom = Math.random();
+				var branchX = segment.x + dx * branchRandom;
+				var branchY = segment.y + dy * branchRandom;
+				var branchWidth = width * 0.7;
+				var spread = 0.9 + 0.6 * (generation / maxGeneration);
+				var branchAngle = randomAngleToHighestClosestVertex(vertices, branchX, branchY, length * 0.9, segment.angle, spread, 12);
 
 				// Continue trunk and make new branch
-				if (gen < maxgen) {
-					thearr.push({ xk: posx, yk: posy, len: len, ang: ang, width: width, gen: gen, opx: px, opy: py });
-					thearr.push({ xk: bposx, yk: bposy, len: len, ang: bang, width: bwidth, gen: (gen + 1), opx: px, opy: py });
+				if (generation < maxGeneration) {
+					segments.push({ 
+						x: x, 
+						y: y, 
+						length: length, 
+						angle: angle, 
+						width: width, 
+						generation: generation, 
+						opx: px, 
+						opy: py 
+					});
+					segments.push({ 
+						x: branchX, 
+						y: branchY, 
+						length: length, 
+						angle: branchAngle, 
+						width: branchWidth, 
+						generation: generation + 1, 
+						opx: px, 
+						opy: py 
+					});
 				}
 
 				// Draw segment
-				c.beginPath();
-				c.moveTo(line.xk - (line.opx * line.width), line.yk - (line.opy * line.width));
-				c.lineTo(line.xk + (line.opx * line.width), line.yk + (line.opy * line.width));
-				c.lineTo(posx + (px * width), posy + (py * width));
-				c.lineTo(posx - (px * width), posy - (py * width));
-				c.closePath();
-				c.fill();
+				context.beginPath();
+				context.moveTo(segment.x - segment.opx * segment.width, segment.y - segment.opy * segment.width);
+				context.lineTo(segment.x + segment.opx * segment.width, segment.y + segment.opy * segment.width);
+				context.lineTo(x + px * width, y + py * width);
+				context.lineTo(x - px * width, y - py * width);
+				context.closePath();
+				context.fill();
 
-			} while (thearr.length > 0)
-
-			// setTimeout(function(){drawHead();}, 30);
+			} while (segments.length > 0)
 		}
-
-		function mousemove(e) {
-			var rect = e.target.getBoundingClientRect();
-			mx = e.clientX - rect.left; //x position within the element.
-			my = e.clientY - rect.top;  //y position within the element.				
-		}
-
 	</script>
 </head>
 
-<body onload="setupSlides();">
-	<canvas id='mycanvas' width=1430 height=780 style='border:1px solid red;' onmousemove='mousemove(event);'></canvas>
+<body onload="draw(15)">
+	<canvas onclick="draw(15)" id="canvas" width="1430" height="780" style="border:1px solid red;"></canvas>
 </body>
 
 </html>
